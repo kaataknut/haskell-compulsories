@@ -2,13 +2,11 @@
 -- Student ved Høgskulen i Bergen
 -- Studentnummer: H142574
 
-
 -- Test
 module Oblig12016 where
 
 -- Imports
 import Data.Char
-import GHC.Base
 
 -- Data and types
 data Ast = Number Integer | Name String | App Ast [Ast] | Block [Ast] | Case Ast [Ast] | Bool Ast Ast Ast | Default | Set String Ast | Lambda String Ast
@@ -164,19 +162,18 @@ eval (Block (first:next)) ctx mem   = eval (Block next) ctx2 mem2
     (_, ctx2, mem2) = eval (Block [first]) ctx mem
 
 -- Evaluate Set patterns
-eval (Set str expr) ctx mem         = eval ast ctx2 mem2
+eval (Set str expr) ctx mem         = eval ast ctx3 mem3
   where
-    (ast, ctx, mem) = eval expr ctx mem
-    (ptr1, mem2)    = addToMem mem ast 
-    ctx2            = addToCtx ctx str ptr1
+    (ast, ctx2, mem2) = eval expr ctx mem
+    (ptr1, mem3)    = addToMem mem2 ast 
+    ctx3            = addToCtx ctx2 str ptr1
 
 -- Evaluate a variable
 eval (Name str) ctx mem
-  | isNothing value                 = error "Variable is not defined!"
-  | otherwise                       = ((fromJust value), ctx, mem)
+  | isNothing adr                   = error "Variable is not defined!"
+  | otherwise                       = ((fromJust (lookupMem mem (fromJust adr))), ctx, mem)
   where
     adr   = lookupCtx ctx str
-    value = lookupMem mem (fromJust adr)
 
 -- Evaluate App patterns
 eval (App (Name op) [a,b]) ctx mem
@@ -206,7 +203,6 @@ eval (Case Default [expr]) ctx mem  = eval expr ctx mem
 
 -- Evaluate Number
 eval (Number a) ctx mem             = (Number a, ctx, mem)
-
 
 run::String -> Ast
 run s = first (eval (parse s) emptyCtx emptyMem)
