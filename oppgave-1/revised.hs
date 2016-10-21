@@ -80,5 +80,33 @@ parseSet (x:xs)
 parseVar :: [String] -> (Ast, [String])
 parseVar (x:xs) = (Name x, xs)
 
+-- Memory
+type Memory  = (Integer, Integer -> Maybe Ast)
 
+emptyMem :: Memory
+emptyMem = (0, \ _ -> Nothing)
+
+lookupMem :: Memory -> Integer -> Maybe Ast
+lookupMem (_, func) key = func key
+
+addToMem :: Memory -> Ast -> (Integer, Memory)
+addToMem (nextPtr, func) ast = (nextPtr, (nextPtr + 1, \ptr -> if (ptr == nextPtr) 
+                                                     then Just ast 
+                                                     else lookupMem (nextPtr, func) ptr))
+
+-- Context
+newtype Context = Context (String -> Maybe Integer)
+instance Show Context where
+  show _ = ""
+
+emptyCtx :: Context
+emptyCtx = Context (const Nothing)
+
+lookupCtx :: Context -> String -> Maybe Integer
+lookupCtx (Context func) key = func key
+
+addToCtx :: Context -> String -> Integer -> Context
+addToCtx (Context ctx) name ptr = Context (\str -> if name == str
+                                                   then Just ptr
+                                                   else ctx str)
 
