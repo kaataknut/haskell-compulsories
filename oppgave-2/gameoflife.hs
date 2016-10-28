@@ -7,7 +7,6 @@ data Life = Alive | Dead
 instance Show Life where
   show c = showLife c
 
-
 newtype Config = Config (Array (Int, Int) Life)
 instance Show Config where
   show c = showConfig c
@@ -22,7 +21,6 @@ showConfig (Config arr) = unlines grouped
 showLife :: Life -> String
 showLife Alive = show('O')
 showLife Dead  = show('-')
-
 
 -- Config (array ((0,0), (n,m)) [((i, j), Dead) | i <- [0..n], j <- [0..m]])
 -- [((1,0),Alive),((2,1),Alive),((0,2),Alive),((1,2),Alive),((2,2),Alive)]
@@ -54,3 +52,20 @@ lifeToString :: [Life] -> [Char]
 lifeToString [] = []
 lifeToString (Alive:xs) = 'O':lifeToString xs
 lifeToString (Dead:xs)  = '-':lifeToString xs
+
+neighbs :: Config -> (Int,Int) -> [(Int,Int)]
+neighbs c (x,y) = map (wrap c) [(x-1, y-1), (x, y-1),(x+1, y-1),(x-1,y),
+                                (x+1,y),(x-1,y+1),(x,y+1),(x+1,y+1)]
+wrap ::  Config -> (Int, Int) -> (Int, Int)
+wrap (Config c) (x,y)  = (((x-1) `mod` n) + 1, ((y-1) `mod` m) + 1) 
+  where
+    (_,(n,m)) = bounds c
+
+
+
+
+
+
+
+
+
