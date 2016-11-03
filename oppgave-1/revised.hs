@@ -1,3 +1,5 @@
+module Revised where
+
 -- Imports
 import Data.Char
 import Data.Maybe
@@ -11,7 +13,7 @@ data Ast = Number Integer | Name String | App Ast [Ast] | Block [Ast] | Case Ast
 isReservedWord :: String -> Bool
 isReservedWord str = elem str ["set", "lambda", "case", "otherwise"]
 
-delimiters = "+-*/,;()."
+delimiters = "+-*/,;().<>"
 
 -- Tokenizer
 tokenize :: String -> [String]
