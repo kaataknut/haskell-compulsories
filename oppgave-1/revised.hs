@@ -13,6 +13,7 @@ isReservedWord :: String -> Bool
 isReservedWord str = elem str ["set", "lambda", "case", "otherwise"]
 
 delimiters = "+-*/,;()."
+
 tokenize :: String -> [String]
 tokenize []           = [];
 tokenize('=':'=':xs)  = "==":tokenize xs
@@ -109,4 +110,45 @@ addToCtx :: Context -> String -> Integer -> Context
 addToCtx (Context ctx) name ptr = Context (\str -> if name == str
                                                    then Just ptr
                                                    else ctx str)
+
+intOps :: [(String, Integer -> Integer -> Integer)]
+intOps = [("+", (+)), ("-", (-)), ("*", (*)), ("/", (div))]
+
+eqOps :: [(String, Integer -> Integer -> Bool)]
+eqOps = [("==", (==)), ("!=", (/=)), (">", (>)), ("<", (<))]
+
+-- Eval function that evaluates an Ast
+eval::Ast -> Context -> Memory -> (Ast, Context, Memory)
+eval (Block [expr]) ctx mem         = eval expr ctx mem
+eval (Block (first:next)) ctx mem   = eval (Block next) ctx2 mem2
+  where
+    (_, ctx2, mem2) = eval (Block [first]) ctx mem
+
+-- Evaluate Number
+eval (Number a) ctx mem             = (Number a, ctx, mem)
+
+-- Evaluate App patterns
+eval (App (Name op) [a,b]) ctx mem = let (Number e1, ctx1, mem1) = eval a ctx mem
+                                         (Number e2, ctx2, mem2) = eval b ctx1 mem1
+                                     in (Number ((fromJust (lookup op intOps)) e1 e2), ctx2, mem2)
+-- Evaluate Cases
+eval (Case (Bool (Name eq) a b) [exprT, other]) ctx mem
+  | caseIsTrue                 = eval exprT ctx2 mem2
+  | otherwise                  = eval other ctx2 mem2
+  where
+    (Number e1, ctx1, mem1) = eval a ctx mem
+    (Number e2, ctx2, mem2) = eval b ctx1 mem1
+    caseIsTrue              = (fromJust (lookup eq eqOps)) e1 e2
+
+-- Evaluate Default cases
+eval (Case Default [expr]) ctx mem  = eval expr ctx mem
+
+run::String -> Ast
+run s = let (ast, _, _) = (eval (parse s) emptyCtx emptyMem) in (ast)
+
+
+
+
+
+
 
