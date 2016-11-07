@@ -72,14 +72,15 @@ insertEntry = do
           contents <- hGetContents handle
           let (line1:_)   = lines contents
           let columnCount = length (wordsWhen (==',') line1)
-          hClose handle
-
+          
           putStrLn ("Enter fields in the form n1,n2,...,n")
           fields <- getLine
           let fieldCount = length (wordsWhen (==',') fields)
           
           if columnCount == fieldCount
-            then appendFile filename (fields ++ "\n")
+            then do 
+              hClose handle
+              appendFile filename (fields ++ "\n")
             else putStrLn ("You did not supply the right amount of fields!")
         else putStrLn ("No database with name " ++ db ++ " exists!")
   -- Back to menu
@@ -101,6 +102,17 @@ printDatabase = do
         else putStrLn ("No database with name " ++ db ++ " exists!")
   mainMenu
 
+selectFromDatabase = do
+  putStrLn ("Enter a database name or type 'b' to go back to the menu")
+  db <- getLine
+
+  putStrLn ("Enter a column label")
+
+  putStrLn("Enter ’<’,’>’,’>=’,’<=’,’==’,’/=’ without the quotations")
+
+  putStrLn("Enter a value to compare")
+
+  mainMenu
 
 -- q  Quit program
 quit = do
