@@ -18,6 +18,7 @@ mainMenu = do
     "b" -> deleteDatabase
     "c" -> insertEntry
     "d" -> printDatabase
+    "e" -> selectFromDatabase
     "q" -> quit
     _   -> mainMenu
 
@@ -25,19 +26,18 @@ mainMenu = do
 createDatabase = do
   putStrLn ("Enter a database name or type 'b' to go back to the menu")
   db <- getLine
-  if null db || db == "b"
-    then mainMenu
+  checkDBCommand db
+
+  let filename = db ++ ".txt"
+  fileDoesExist <- doesFileExist filename
+  if fileDoesExist
+    then putStrLn ("Already exists database with name " ++ db ++ "!")
     else do
-      let filename = db ++ ".txt"
-      fileDoesExist <- doesFileExist filename
-      if fileDoesExist
-        then putStrLn ("Already exists database with name " ++ db ++ "!")
-        else do
-        putStrLn ("Enter column names in the form n1,n2,...,n")
-        cols <- getLine
-        validateColumns cols
-        writeFile (db ++ ".txt") (cols ++ "\n")
-        putStrLn ("Successfully created database " ++ db)
+    putStrLn ("Enter column names in the form n1,n2,...,n")
+    cols <- getLine
+    validateColumns cols
+    writeFile (db ++ ".txt") (cols ++ "\n")
+    putStrLn ("Successfully created database " ++ db)
     -- Go back to menu        
   mainMenu
 
@@ -45,66 +45,66 @@ createDatabase = do
 deleteDatabase = do
   putStrLn ("Enter a database name or type 'b' to go back to the menu")
   db <- getLine
-  if null db || db == "b"
-    then mainMenu
-    else do
-      let filename = db ++ ".txt"
-      fileDoesExist <- doesFileExist filename
-      if fileDoesExist
-        then do
-          removeFile filename
-          putStrLn ("Successfully deleted database " ++ db)
-        else putStrLn ("No database with name " ++ db ++ " exists!")
+  checkDBCommand db
+
+  let filename = db ++ ".txt"
+  fileDoesExist <- doesFileExist filename
+  if fileDoesExist
+    then do
+      removeFile filename
+      putStrLn ("Successfully deleted database " ++ db)
+    else putStrLn ("No database with name " ++ db ++ " exists!")
   -- Back to menu
   mainMenu
 
 insertEntry = do
   putStrLn ("Enter a database name or type 'b' to go back to the menu")
   db <- getLine
-  if null db || db == "b"
-    then mainMenu
-    else do
-      let filename = db ++ ".txt"
-      fileDoesExist <- doesFileExist filename
-      if fileDoesExist
-        then do
-          handle <- openFile filename ReadMode
-          contents <- hGetContents handle
-          let (line1:_)   = lines contents
-          let columnCount = length (wordsWhen (==',') line1)
-          
-          putStrLn ("Enter fields in the form n1,n2,...,n")
-          fields <- getLine
-          let fieldCount = length (wordsWhen (==',') fields)
-          
-          if columnCount == fieldCount
-            then do 
-              hClose handle
-              appendFile filename (fields ++ "\n")
-            else putStrLn ("You did not supply the right amount of fields!")
-        else putStrLn ("No database with name " ++ db ++ " exists!")
+  checkDBCommand db
+
+  let filename = db ++ ".txt"
+  fileDoesExist <- doesFileExist filename
+  if fileDoesExist
+    then do
+      handle <- openFile filename ReadMode
+      contents <- hGetContents handle
+      let (line1:_)   = lines contents
+      let columnCount = length (wordsWhen (==',') line1)
+      
+      putStrLn ("Enter fields in the form n1,n2,...,n")
+      fields <- getLine
+      let fieldCount = length (wordsWhen (==',') fields)
+      
+      if columnCount == fieldCount
+        then do 
+          hClose handle
+          appendFile filename (fields ++ "\n")
+        else do
+          hClose handle
+          putStrLn ("You did not supply the right amount of fields!")
+    else putStrLn ("No database with name " ++ db ++ " exists!")
   -- Back to menu
   mainMenu
 
 printDatabase = do
   putStrLn ("Enter a database name or type 'b' to go back to the menu")
   db <- getLine
-  if null db || db == "b"
-    then mainMenu
-    else do
-      let filename = db ++ ".txt"
-      fileDoesExist <- doesFileExist filename
-      if fileDoesExist
-        then do
-          handle <- openFile filename ReadMode
-          contents <- hGetContents handle
-          putStrLn("\n" ++ contents)
-        else putStrLn ("No database with name " ++ db ++ " exists!")
+  checkDBCommand db
+
+  let filename = db ++ ".txt"
+  fileDoesExist <- doesFileExist filename
+  if fileDoesExist
+    then do
+      handle <- openFile filename ReadMode
+      contents <- hGetContents handle
+      putStrLn("\n" ++ contents)
+    else putStrLn ("No database with name " ++ db ++ " exists!")
   mainMenu
 
 selectFromDatabase = do
   putStrLn ("Enter a database name or type 'b' to go back to the menu")
   db <- getLine
+  checkDBCommand db
 
   putStrLn ("Enter a column label")
 
@@ -118,6 +118,16 @@ selectFromDatabase = do
 quit = do
   putStrLn ("Quitter")
   return()
+
+
+
+checkDBCommand :: String -> IO()
+checkDBCommand db = do
+                      if null db || db == "b"
+                        then mainMenu
+                        else do
+                          return ()
+
 
 validateColumns :: String -> IO()
 validateColumns str
@@ -145,5 +155,3 @@ wordsWhen p s =  case dropWhile p s of
                       "" -> []
                       s' -> w : wordsWhen p s''
                             where (w, s'') = break p s'
-
-
