@@ -16,6 +16,8 @@ mainMenu = do
   case command of
     "a" -> createDatabase
     "b" -> deleteDatabase
+    "c" -> insertEntry
+    "d" -> printDatabase
     "q" -> quit
     _   -> mainMenu
 
@@ -27,15 +29,16 @@ createDatabase = do
     then mainMenu
     else do
       let filename = db ++ ".txt"
-      putStrLn ("Enter column names in the form n1,n2,...,n")
-      cols <- getLine
-      if not $ uniqueColumns (wordsWhen (==',') cols)
-        then do
-          putStrLn ("Error! Duplicate column labels!")
+      fileDoesExist <- doesFileExist filename
+      if fileDoesExist
+        then putStrLn ("Already exists database with name " ++ db ++ "!")
         else do
-          writeFile (db ++ ".txt") (cols ++ "\n")
-          putStrLn ("Successfully created database " ++ db)
-  -- Go back to menu        
+        putStrLn ("Enter column names in the form n1,n2,...,n")
+        cols <- getLine
+        validateColumns cols
+        writeFile (db ++ ".txt") (cols ++ "\n")
+        putStrLn ("Successfully created database " ++ db)
+    -- Go back to menu        
   mainMenu
 
 -- b  Delete database
@@ -51,18 +54,71 @@ deleteDatabase = do
         then do
           removeFile filename
           putStrLn ("Successfully deleted database " ++ db)
-        else putStrLn ("No file with name " ++ db ++ " exists!")
+        else putStrLn ("No database with name " ++ db ++ " exists!")
   -- Back to menu
   mainMenu
+
+insertEntry = do
+  putStrLn ("Enter a database name or type 'b' to go back to the menu")
+  db <- getLine
+  if null db || db == "b"
+    then mainMenu
+    else do
+      let filename = db ++ ".txt"
+      fileDoesExist <- doesFileExist filename
+      if fileDoesExist
+        then do
+          handle <- openFile filename ReadMode
+          contents <- hGetContents handle
+          let (line1:_)   = lines contents
+          let columnCount = length (wordsWhen (==',') line1)
+          hClose handle
+
+          putStrLn ("Enter fields in the form n1,n2,...,n")
+          fields <- getLine
+          let fieldCount = length (wordsWhen (==',') fields)
+          
+          if columnCount == fieldCount
+            then appendFile filename (fields ++ "\n")
+            else putStrLn ("You did not supply the right amount of fields!")
+        else putStrLn ("No database with name " ++ db ++ " exists!")
+  -- Back to menu
+  mainMenu
+
+printDatabase = do
+  putStrLn ("Enter a database name or type 'b' to go back to the menu")
+  db <- getLine
+  if null db || db == "b"
+    then mainMenu
+    else do
+      let filename = db ++ ".txt"
+      fileDoesExist <- doesFileExist filename
+      if fileDoesExist
+        then do
+          handle <- openFile filename ReadMode
+          contents <- hGetContents handle
+          putStrLn("\n" ++ contents)
+        else putStrLn ("No database with name " ++ db ++ " exists!")
+  mainMenu
+
 
 -- q  Quit program
 quit = do
   putStrLn ("Quitter")
   return()
 
+validateColumns :: String -> IO()
+validateColumns str
+  | elem ' ' str                                = do
+                                                    putStrLn("Illegal with spaces in column labels!")
+                                                    mainMenu
+  | not $ uniqueColumns (wordsWhen (==',') str) = do
+                                                    putStrLn("Illegal with duplicate column labels!")
+                                                    mainMenu
+  | otherwise                                   = return () 
+
 
 -- Helper Functions
-
 -- Checks if a list of strings are unique
 uniqueColumns :: [String] -> Bool
 uniqueColumns []     = True
