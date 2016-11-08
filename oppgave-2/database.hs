@@ -1,6 +1,8 @@
 import System.IO
 import Data.List
 import System.Directory
+import Data.Char
+import Data.Maybe
 
 mainMenu = do
   putStrLn ("\na  create a database")
@@ -24,84 +26,126 @@ mainMenu = do
 
 -- a  Creating Database
 createDatabase = do
-  putStrLn ("Enter a database name or type 'b' to go back to the menu")
-  db <- getLine
-  checkDBCommand db
+  db <- getDBName
+  let goToMenu = goBackToMenu db
 
-  let filename = db ++ ".txt"
-  checkFileExist filename True ("Already exists database with name " ++ db ++ "!")
+  if goToMenu then return ()
+  else do
+    let filename = db ++ ".txt"
+    fileDoesExist <- doesFileExist filename
 
-  putStrLn ("Enter column names in the form n1,n2,...,n")
-  cols <- getLine
-  validateColumns cols
-  writeFile (db ++ ".txt") (cols ++ "\n")
-  putStrLn ("Successfully created database " ++ db)      
+    if fileDoesExist then putStrLn ("Already exists database with name " ++ db ++ "!")
+    else do
+      putStrLn ("Enter column names in the form n1,n2,...,n")
+      cols <- getLine
+      if      elem ' '                                cols then putStrLn("Illegal with spaces in column labels!")
+      else if not $ uniqueColumns (wordsWhen (==',') cols) then putStrLn("Illegal with duplicate column labels!")
+      else do
+        writeFile (db ++ ".txt") (cols ++ "\n")
+        putStrLn ("Successfully created database " ++ db)
   mainMenu
 
 -- b  Delete database
 deleteDatabase = do
-  putStrLn ("Enter a database name or type 'b' to go back to the menu")
-  db <- getLine
-  checkDBCommand db
-
-  let filename = db ++ ".txt"
-  checkFileExist filename False ("No database with name " ++ db ++ " exists!")
-
-  removeFile filename
-  putStrLn ("Successfully deleted database " ++ db)
-  mainMenu
-
-insertEntry = do
-  putStrLn ("Enter a database name or type 'b' to go back to the menu")
-  db <- getLine
-  checkDBCommand db
-
-  let filename = db ++ ".txt"
-  checkFileExist filename False ("No database with name " ++ db ++ " exists!")
-
-  handle <- openFile filename ReadMode
-  contents <- hGetContents handle
-  let (line1:_)   = lines contents
-  let columnCount = length (wordsWhen (==',') line1)
+  db <- getDBName
+  let goToMenu = goBackToMenu db
   
-  putStrLn ("Enter fields in the form n1,n2,...,n")
-  fields <- getLine
-  let fieldCount = length (wordsWhen (==',') fields)
-  
-  if columnCount == fieldCount
-    then do 
-      hClose handle
-      appendFile filename (fields ++ "\n")
+  if goToMenu then mainMenu
+  else do
+    let filename = db ++ ".txt"
+    fileDoesExist <- doesFileExist filename
+    if not fileDoesExist then putStrLn("No database with name " ++ db ++ " exists!")
     else do
-      hClose handle
-      putStrLn ("You did not supply the right amount of fields!")
-  -- Back to menu
+      removeFile filename
+      putStrLn ("Successfully deleted database " ++ db)
   mainMenu
 
+-- c  Inserting row
+insertEntry = do
+  db <- getDBName
+  let goToMenu = goBackToMenu db
+
+  if goToMenu then return ()
+  else do
+    let filename = db ++ ".txt"
+    fileDoesExist <- doesFileExist filename
+    if not fileDoesExist then putStrLn("No database with name " ++ db ++ " exists!")
+      else do
+      handle <- openFile filename ReadMode
+      contents <- hGetContents handle
+      let (line1:_)   = lines contents
+      let columnCount = length (wordsWhen (==',') line1)
+      
+      putStrLn ("Enter fields in the form n1,n2,...,n")
+      fields <- getLine
+      let fieldCount = length (wordsWhen (==',') fields)
+      
+      if columnCount == fieldCount
+      then do 
+        hClose handle
+        appendFile filename (fields ++ "\n")
+      else do
+        hClose handle
+        putStrLn ("You did not supply the right amount of fields!")
+      -- Back to menu
+  mainMenu
+
+-- d  Print database
 printDatabase = do
-  putStrLn ("Enter a database name or type 'b' to go back to the menu")
-  db <- getLine
-  checkDBCommand db
-
-  let filename = db ++ ".txt"
-  checkFileExist filename False ("No database with name " ++ db ++ " exists!")
-  
-  handle <- openFile filename ReadMode
-  contents <- hGetContents handle
-  putStrLn("\n" ++ contents)
+  db <- getDBName
+  let goToMenu = goBackToMenu db
+  if goToMenu then return ()
+  else do
+    let filename = db ++ ".txt"
+    fileDoesExist <- doesFileExist filename
+    if not fileDoesExist then putStrLn("No database with name " ++ db ++ " exists!")
+    else do
+      handle <- openFile filename ReadMode
+      contents <- hGetContents handle
+      putStrLn("\n" ++ contents)
   mainMenu
 
+-- e  Select from Database
+-- knut,20\nerik,40\nlars,13
 selectFromDatabase = do
-  putStrLn ("Enter a database name or type 'b' to go back to the menu")
-  db <- getLine
-  checkDBCommand db
+  db <- getDBName
+  let goToMenu = goBackToMenu db
+  
+  if goToMenu then return ()
+  else do
+    let filename = db ++ ".txt"
+    fileDoesExist <- doesFileExist filename
+    if not fileDoesExist then putStrLn("No database with name " ++ db ++ " exists!")
+    else do
+      -- Get all info
+      putStrLn ("Enter a column label")
+      col <- getLine
+      putStrLn("Enter ’<’,’>’,’>=’,’<=’,’==’,’/=’ without the quotations")
+      operator <- getLine
+      putStrLn("Enter a value to compare")
+      rawVal <- getLine
+      let value = rawVal
 
-  putStrLn ("Enter a column label")
+      -- Open File and get contens
+      handle <- openFile filename ReadMode
+      contents <- hGetContents handle
+      let (line1:rest)   = lines contents
+      let columns = wordsWhen (==',') line1
 
-  putStrLn("Enter ’<’,’>’,’>=’,’<=’,’==’,’/=’ without the quotations")
+      -- Typed in value decides string/int
+      let datatype = checkType value
 
-  putStrLn("Enter a value to compare")
-
+      if datatype == 'e' then return ()
+      else do
+        let fieldNo =  elemIndex col columns
+        if isNothing fieldNo then putStrLn("No column with name " ++ col ++ " in database " ++ db ++ "!")
+        else do
+          let index = fromJust fieldNo
+          let rows = toRowsList rest
+          let sel = filter (filterHelper datatype operator value index) rows
+          putStrLn ("\n" ++ line1)
+          putStrLn (replicate (length line1) '-')
+          putStrLn (formatList sel)
   mainMenu
 
 -- q  Quit program
@@ -109,33 +153,54 @@ quit = do
   putStrLn ("Quitter")
   return()
 
-
-checkFileExist :: String -> Bool -> String -> IO()
-checkFileExist fn b mes = do
-                            fileDoesExist <- doesFileExist fn 
-                            if fileDoesExist == b
-                              then do
-                                putStrLn (mes)
-                                mainMenu
-                              else return ()
-
-checkDBCommand :: String -> IO()
-checkDBCommand db = do
-                      if null db || db == "b"
-                        then mainMenu
-                        else do
-                          return ()
+filterHelper :: Char -> String -> String -> Int -> [String] -> Bool
+filterHelper t op v i xs
+  | t == 'i'   = selectIntFunc op (read(xs!!i)) (read v)
+  | t == 's'   = selectStrFunc op (xs!!i) v
 
 
-validateColumns :: String -> IO()
-validateColumns str
-  | elem ' ' str                                = do
-                                                    putStrLn("Illegal with spaces in column labels!")
-                                                    mainMenu
-  | not $ uniqueColumns (wordsWhen (==',') str) = do
-                                                    putStrLn("Illegal with duplicate column labels!")
-                                                    mainMenu
-  | otherwise                                   = return () 
+formatList :: [[String]] -> String
+formatList [] = ""
+formatList xs = unlines $ map unwords xs
+
+toRowsList :: [String] -> [[String]]
+toRowsList []     = []
+toRowsList (x:xs) = (wordsWhen (==',') x):toRowsList xs 
+
+
+getDBName :: IO String
+getDBName = do
+              putStrLn ("Enter a database name or type 'b' to go back to the menu")
+              db <- getLine
+              return (db)
+
+goBackToMenu :: String -> Bool
+goBackToMenu [] = True
+goBackToMenu s  = s == "b"
+
+checkType :: String -> Char
+checkType s 
+  | all isDigit s       = 'i'
+  | not (all isDigit s) = 's'
+  | otherwise           = 'e'
+
+selectIntFunc :: String -> (Int -> Int -> Bool)
+selectIntFunc l 
+  | l == "<" = (<)
+  | l == ">" = (>)
+  | l == ">=" = (>=)
+  | l == "<=" = (<=)
+  | l == "==" = (==)
+  | l == "/=" = (/=)
+
+selectStrFunc :: String -> (String -> String -> Bool)
+selectStrFunc l 
+  | l == "<" = (<)
+  | l == ">" = (>)
+  | l == ">=" = (>=)
+  | l == "<=" = (<=)
+  | l == "==" = (==)
+  | l == "/=" = (/=)
 
 
 -- Helper Functions
