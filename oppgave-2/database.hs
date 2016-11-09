@@ -21,6 +21,7 @@ mainMenu = do
     "c" -> insertEntry
     "d" -> printDatabase
     "e" -> selectFromDatabase
+    "f" -> deleteFromDatabase
     "q" -> quit
     _   -> mainMenu
 
@@ -106,7 +107,6 @@ printDatabase = do
   mainMenu
 
 -- e  Select from Database
--- knut,20\nerik,40\nlars,13
 selectFromDatabase = do
   db <- getDBName
   let goToMenu = goBackToMenu db
@@ -120,8 +120,7 @@ selectFromDatabase = do
       -- Get all info
       putStrLn ("Enter a column label")
       col <- getLine
-      putStrLn("Enter ’<’,’>’,’>=’,’<=’,’==’,’/=’ without the quotations")
-      operator <- getLine
+      operator <- getOperator
       putStrLn("Enter a value to compare")
       rawVal <- getLine
       let value = rawVal
@@ -148,10 +147,50 @@ selectFromDatabase = do
           putStrLn (formatList sel)
   mainMenu
 
+-- f  Delete from Database
+deleteFromDatabase = do
+  db <- getDBName
+  let goToMenu = goBackToMenu db
+
+  if goToMenu then return()
+  else do
+    let filename = db ++ ".txt"
+    fileDoesExist <- doesFileExist filename
+    if not fileDoesExist then putStrLn("No database with name " ++ db ++ " exists!")
+    else do
+      putStrLn ("Enter a column label")
+      col <- getLine
+      operator <- getOperator
+      putStrLn("Enter a value to compare")
+      rawVal <- getLine
+
+      let datatype = checkType rawVal
+
+      if datatype == 'e' then return ()
+        else do
+        -- Open File and get contens
+        contents <- readFile filename
+        let (line1:rest)   = lines contents
+        let columns = wordsWhen (==',') line1
+
+        let fieldNo =  elemIndex col columns
+        if isNothing fieldNo then do
+         putStrLn("No column with name " ++ col ++ " in database " ++ db ++ "!")
+        else do
+          let index = fromJust fieldNo
+          let rows = toRowsList rest
+          let leftovers = filter (not . filterHelper datatype operator rawVal index) rows
+          let filecontent = line1 ++ "\n" ++ (formatList leftovers)
+          length contents `seq` (writeFile filename filecontent)
+  mainMenu
+
+
 -- q  Quit program
 quit = do
   putStrLn ("Quitter")
   return()
+
+
 
 filterHelper :: Char -> String -> String -> Int -> [String] -> Bool
 filterHelper t op v i xs
@@ -167,6 +206,13 @@ toRowsList :: [String] -> [[String]]
 toRowsList []     = []
 toRowsList (x:xs) = (wordsWhen (==',') x):toRowsList xs 
 
+getOperator :: IO String
+getOperator = do
+                putStrLn("Enter ’<’,’>’,’>=’,’<=’,’==’,’/=’ without the quotations")
+                op <- getLine
+                if elem op ["<",">",">=","<=","==","/="]
+                  then return (op)
+                else getOperator
 
 getDBName :: IO String
 getDBName = do
@@ -201,7 +247,6 @@ selectStrFunc l
   | l == "<=" = (<=)
   | l == "==" = (==)
   | l == "/=" = (/=)
-
 
 -- Helper Functions
 -- Checks if a list of strings are unique
