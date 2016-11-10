@@ -1,3 +1,8 @@
+-- Knut Ringheim Lunde
+-- Student at Høgskulen i Bergen
+-- Student number: H142574
+-- GitHub repo for this assignment if interested: https://github.com/kaataknut/haskell-compulsories/tree/master/oppgave-2
+
 import Data.Array
 import Data.Char
 import Data.List
@@ -75,9 +80,6 @@ lifeToString [] = []
 lifeToString (Alive:xs) = 'O':lifeToString xs
 lifeToString (Dead:xs)  = '-':lifeToString xs
 
--- (1,1), (x,y)
--- (0,0),      (1,0),  (2,0),     (2,1),    (2,2),     (1,2),    (0,2),     (0,1)
--- (x-1,y-1), (x,y-1), (x+1,y-1), (x+1, y), (x+1, y+1) (x, y+1)  (x-1, y+1) (x-1, y)
 neighbs :: Config -> (Int,Int) -> [(Int,Int)]
 neighbs c (x,y) = map (wrap c) [(x-1, y-1),(x, y-1),
                                 (x+1, y-1),(x+1,y),
@@ -110,3 +112,5 @@ livecells c = births c ++ survivors c
 
 format :: [(Int,Int)] -> [((Int,Int), Life)]
 format xs = [(p, Alive) | p <- xs] 
+
+

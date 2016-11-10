@@ -1,8 +1,21 @@
+-- Knut Ringheim Lunde
+-- Student at Høgskulen i Bergen
+-- Student number: H142574
+-- GitHub repo for this assignment if interested: https://github.com/kaataknut/haskell-compulsories/tree/master/oppgave-2
+
 import System.IO
 import Data.List
 import System.Directory
 import Data.Char
 import Data.Maybe
+
+main = do 
+  mainMenu
+  return ()
+
+invalidCommand = do
+  putStrLn ("Invalid command!")
+  mainMenu
 
 mainMenu = do
   putStrLn ("\na  create a database")
@@ -23,7 +36,7 @@ mainMenu = do
     "e" -> selectFromDatabase
     "f" -> deleteFromDatabase
     "q" -> quit
-    _   -> mainMenu
+    _   -> invalidCommand
 
 -- a  Creating Database
 createDatabase = do
@@ -88,7 +101,6 @@ insertEntry = do
       else do
         hClose handle
         putStrLn ("You did not supply the right amount of fields!")
-      -- Back to menu
   mainMenu
 
 -- d  Print database
@@ -187,11 +199,11 @@ deleteFromDatabase = do
 
 -- q  Quit program
 quit = do
-  putStrLn ("Quitter")
+  putStrLn ("Quiting program")
   return()
 
 
-
+-- Type Operator Value Index List
 filterHelper :: Char -> String -> String -> Int -> [String] -> Bool
 filterHelper t op v i xs
   | t == 'i'   = selectIntFunc op (read(xs!!i)) (read v)
