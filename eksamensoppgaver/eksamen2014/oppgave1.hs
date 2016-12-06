@@ -3,17 +3,10 @@
 -- 1.1
 maxsum :: [[Int]] -> Int
 maxsum []     = 0
-maxsum (x:xs) = maxhelper x + maxsum xs
+maxsum (x:xs) = maximum x + maxsum xs
 
--- Helper function to retrieve the maximum number of single list
-maxhelper :: [Int] -> Int
-maxhelper []     = 0
-maxhelper [x]    = x
-maxhelper (x:xs)
-  | x > maxrest    = x
-  | otherwise      = maxrest
-  where
-    maxrest = maxhelper xs
+maxsum2 :: [[Int]] -> Int
+maxsum2 ls = sum [maximum l | l <- ls]
 
 -- 1.2
 pack :: Eq(t) => [t] -> [[t]]
