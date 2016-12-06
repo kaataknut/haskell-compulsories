@@ -1,5 +1,9 @@
 -- Oppgave 1 - Haskell
 
+-- Given type
+data Ast = S | U | Var Char | Ik Ast | Og Ast Ast | El Ast Ast
+  deriving (Show)
+
 -- 1.1)
 parse :: String -> Ast
 parse = fst . parseExpr
